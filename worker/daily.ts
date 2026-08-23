@@ -25,7 +25,7 @@ export const encodeRoundId = (date: string, genre: Genre, trackId: string): stri
 
 export const decodeRoundId = (
   roundId: string,
-): => { date: string; genre: Genre; trackId: string } | null {
+): { date: string; genre: Genre; trackId: string } | null => {
   try {
     const padded = roundId.replace(/-/g, '+').replace(/_/g, '/')
     const pad = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))

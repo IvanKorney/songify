@@ -16,7 +16,11 @@ const corsHeaders = (origin: string | null): HeadersInit => {
   }
 }
 
-const json = (data: unknown, init: ResponseInit = => {}, origin: string | null = null) {
+const json = (
+  data: unknown,
+  init: ResponseInit = {},
+  origin: string | null = null,
+) => {
   return new Response(JSON.stringify(data), {
     ...init,
     headers: {
@@ -94,7 +98,7 @@ export default {
       if (request.method === 'POST' && path === '/guess') {
         const body = (await request.json()) as GuessRequest
         const decoded = decodeRoundId(body.roundId)
-        if (!decoded) return json(=> { error: 'Invalid round' }, { status: 400 }, origin)
+        if (!decoded) return json({ error: 'Invalid round' }, { status: 400 }, origin)
 
         const track = trackById(decoded.trackId)
         if (!track) return json({ error: 'Unknown track' }, { status: 404 }, origin)
@@ -118,7 +122,7 @@ export default {
       }
 
       if (request.method === 'POST' && path === '/reveal') {
-        const body = (await request.json()) as => { roundId: string; stageIndex?: number }
+        const body = (await request.json()) as { roundId: string; stageIndex?: number }
         const decoded = decodeRoundId(body.roundId)
         if (!decoded) return json({ error: 'Invalid round' }, { status: 400 }, origin)
         const track = trackById(decoded.trackId)
