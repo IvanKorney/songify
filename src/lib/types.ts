@@ -1,11 +1,12 @@
-export type Genre = 'all' | 'rock' | 'hiphop' | 'pop'
-
-export const GENRES: { id: Genre; label: string }[] = [
+export const GENRES = [
   { id: 'all', label: 'All' },
   { id: 'rock', label: 'Rock' },
   { id: 'hiphop', label: 'Hip Hop' },
   { id: 'pop', label: 'Pop' },
-]
+  { id: 'country', label: 'Country' },
+] as const
+
+export type Genre = (typeof GENRES)[number]['id']
 
 export const STAGE_SECONDS = [0.1, 0.5, 2, 4, 8, 16] as const
 export const STAGE_POINTS = [6, 5, 4, 3, 2, 1] as const
