@@ -1,4 +1,11 @@
-export type Genre = 'all' | 'rock' | 'hiphop' | 'pop'
+export const GENRES = ['all', 'rock', 'hiphop', 'pop', 'country'] as const
+export type Genre = (typeof GENRES)[number]
+
+const GENRE_SET: ReadonlySet<string> = new Set(GENRES)
+
+export function isGenre(value: string): value is Genre {
+  return GENRE_SET.has(value)
+}
 
 export type TrackPublic = {
   id: string

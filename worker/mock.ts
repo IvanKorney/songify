@@ -65,13 +65,32 @@ export const MOCK_TRACKS: TrackSecret[] = [
     externalUrl: 'https://open.spotify.com/',
     answerKey: 'bohemian rhapsody|queen',
   },
+  {
+    id: 'mock-country-1',
+    title: 'Jolene',
+    artists: ['Dolly Parton'],
+    albumArtUrl: null,
+    previewUrl: 'https://mdn.github.io/webaudio-examples/audio-basics/outfoxing.mp3',
+    externalUrl: 'https://open.spotify.com/',
+    answerKey: 'jolene|dolly parton',
+  },
+  {
+    id: 'mock-country-2',
+    title: 'Take Me Home, Country Roads',
+    artists: ['John Denver'],
+    albumArtUrl: null,
+    previewUrl: 'https://mdn.github.io/webaudio-examples/audio-basics/outfoxing.mp3',
+    externalUrl: 'https://open.spotify.com/',
+    answerKey: 'take me home, country roads|john denver',
+  },
 ]
 
 const BY_GENRE: Record<Genre, string[]> = {
-  all: ['mock-all-1', 'mock-rock-1', 'mock-pop-1', 'mock-hiphop-1'],
+  all: ['mock-all-1', 'mock-rock-1', 'mock-pop-1', 'mock-hiphop-1', 'mock-country-1'],
   rock: ['mock-rock-1', 'mock-rock-2'],
   hiphop: ['mock-hiphop-1', 'mock-hiphop-2'],
   pop: ['mock-pop-1', 'mock-pop-2'],
+  country: ['mock-country-1', 'mock-country-2'],
 }
 
 function hash(input: string): number {

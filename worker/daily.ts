@@ -1,4 +1,4 @@
-import type { Genre } from './types'
+import { isGenre, type Genre } from './types'
 
 /** Calendar date in America/New_York (EST/EDT). */
 export function nyDate(now = new Date()): string {
@@ -10,11 +10,11 @@ export function nyDate(now = new Date()): string {
   }).format(now)
 }
 
+/** Coerce a query/path string into a Genre option (or null). */
 export function parseGenre(value: string | null): Genre | null {
   if (!value) return null
   const g = value.toLowerCase()
-  if (g === 'all' || g === 'rock' || g === 'hiphop' || g === 'pop') return g
-  return null
+  return isGenre(g) ? g : null
 }
 
 /** Opaque round id: base64url(date|genre|trackId) — fine for mock; harden with HMAC later */
