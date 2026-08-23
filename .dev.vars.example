@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local wrangler secrets (never commit .dev.vars)
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
+MOCK_MODE=true
