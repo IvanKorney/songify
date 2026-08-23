@@ -1,3 +1,4 @@
+import { http } from './http'
 import type {
   DailyPuzzle,
   Genre,
@@ -5,47 +6,43 @@ import type {
   TrackPublic,
 } from './types'
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  })
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(body.error ?? `Request failed (${res.status})`)
-  }
-  return res.json() as Promise<T>
-}
-
 export function fetchDaily(genre: Genre) {
-  return request<DailyPuzzle>(`/daily?genre=${genre}`)
+  return http
+    .get<DailyPuzzle>('/daily', { params: { genre } })
+    .then((res) => res.data)
 }
 
 export function fetchUnlimited(genre?: Genre) {
-  const q = genre ? `?genre=${genre}` : ''
-  return request<DailyPuzzle>(`/unlimited${q}`)
+  return http
+    .get<DailyPuzzle>('/unlimited', { params: genre ? { genre } : undefined })
+    .then((res) => res.data)
 }
 
 export function searchTracks(q: string) {
-  return request<{ hits: SearchHit[] }>(`/search?q=${encodeURIComponent(q)}`)
+  return http
+    .get<{ hits: SearchHit[] }>('/search', { params: { q } })
+    .then((res) => res.data)
 }
 
 export function submitGuess(roundId: string, trackId: string, stageIndex: number) {
-  return request<
-    | { correct: true; score: number; track: TrackPublic }
-    | { correct: false; score: 0 }
-  >('/guess', {
-    method: 'POST',
-    body: JSON.stringify({ roundId, trackId, stageIndex }),
-  })
+  return http
+    .post<
+      | { correct: true; score: number; track: TrackPublic }
+      | { correct: false; score: 0 }
+    >('/guess', { roundId, trackId, stageIndex })
+    .then((res) => res.data)
 }
 
 export function revealTrack(roundId: string) {
-  return request<{ track: TrackPublic; score: number }>('/reveal', {
-    method: 'POST',
-    body: JSON.stringify({ roundId }),
-  })
+  return http
+    .post<{ track: TrackPublic; score: number }>('/reveal', { roundId })
+    .then((res) => res.data)
+}
+
+export const queryKeys = {
+  daily: (genre: Genre) => ['daily', genre] as const,
+  unlimited: (genre: Genre) => ['unlimited', genre] as const,
+  search: (q: string) => ['search', q] as const,
+  me: ['me'] as const,
+  leaderboard: (date: string, genre: Genre) => ['leaderboard', date, genre] as const,
 }
