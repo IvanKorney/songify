@@ -1,7 +1,7 @@
 import { isGenre, type Genre } from './types'
 
 /** Calendar date in America/New_York (EST/EDT). */
-export function nyDate(now = new Date()): string {
+export const nyDate = (now = new Date()): string => {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/New_York',
     year: 'numeric',
@@ -11,21 +11,21 @@ export function nyDate(now = new Date()): string {
 }
 
 /** Coerce a query/path string into a Genre option (or null). */
-export function parseGenre(value: string | null): Genre | null {
+export const parseGenre = (value: string | null): Genre | null => {
   if (!value) return null
   const g = value.toLowerCase()
   return isGenre(g) ? g : null
 }
 
 /** Opaque round id: base64url(date|genre|trackId) — fine for mock; harden with HMAC later */
-export function encodeRoundId(date: string, genre: Genre, trackId: string): string {
+export const encodeRoundId = (date: string, genre: Genre, trackId: string): string => {
   const raw = `${date}|${genre}|${trackId}`
   return btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-export function decodeRoundId(
+export const decodeRoundId = (
   roundId: string,
-): { date: string; genre: Genre; trackId: string } | null {
+): => { date: string; genre: Genre; trackId: string } | null {
   try {
     const padded = roundId.replace(/-/g, '+').replace(/_/g, '/')
     const pad = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))

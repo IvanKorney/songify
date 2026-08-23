@@ -93,7 +93,7 @@ const BY_GENRE: Record<Genre, string[]> = {
   country: ['mock-country-1', 'mock-country-2'],
 }
 
-function hash(input: string): number {
+const hash = (input: string): number => {
   let h = 2166136261
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i)
@@ -102,11 +102,11 @@ function hash(input: string): number {
   return h >>> 0
 }
 
-export function trackById(id: string): TrackSecret | undefined {
+export const trackById = (id: string): TrackSecret | undefined => {
   return MOCK_TRACKS.find((t) => t.id === id)
 }
 
-export function dailyTrack(date: string, genre: Genre): TrackSecret {
+export const dailyTrack = (date: string, genre: Genre): TrackSecret => {
   const pool = BY_GENRE[genre]
     .map((id) => trackById(id))
     .filter((t): t is TrackSecret => Boolean(t))
@@ -114,7 +114,7 @@ export function dailyTrack(date: string, genre: Genre): TrackSecret {
   return pool[idx]!
 }
 
-export function searchMock(query: string, limit = 8): TrackSecret[] {
+export const searchMock = (query: string, limit = 8): TrackSecret[] => {
   const q = query.trim().toLowerCase()
   if (!q) return []
   return MOCK_TRACKS.filter(
@@ -124,7 +124,7 @@ export function searchMock(query: string, limit = 8): TrackSecret[] {
   ).slice(0, limit)
 }
 
-export function randomUnlimited(genre?: Genre): TrackSecret {
+export const randomUnlimited = (genre?: Genre): TrackSecret => {
   const pool =
     genre && genre !== 'all'
       ? BY_GENRE[genre]
@@ -135,7 +135,7 @@ export function randomUnlimited(genre?: Genre): TrackSecret {
   return pool[idx]!
 }
 
-export function toPublic(track: TrackSecret) {
+export const toPublic = (track: TrackSecret) => {
   const { answerKey: _, ...pub } = track
   return pub
 }

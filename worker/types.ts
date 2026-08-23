@@ -3,7 +3,7 @@ export type Genre = (typeof GENRES)[number]
 
 const GENRE_SET: ReadonlySet<string> = new Set(GENRES)
 
-export function isGenre(value: string): value is Genre {
+export const isGenre = (value: string): value is Genre => {
   return GENRE_SET.has(value)
 }
 
