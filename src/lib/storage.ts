@@ -2,11 +2,11 @@ import type { Genre, RoundState } from './types'
 
 const PREFIX = 'songify:v1'
 
-function dailyKey(date: string, genre: Genre) {
+const dailyKey = (date: string, genre: Genre) => {
   return `${PREFIX}:daily:${date}:${genre}`
 }
 
-export function loadDailyState(date: string, genre: Genre): RoundState | null {
+export const loadDailyState = (date: string, genre: Genre): RoundState | null => {
   try {
     const raw = localStorage.getItem(dailyKey(date, genre))
     if (!raw) return null
@@ -16,12 +16,12 @@ export function loadDailyState(date: string, genre: Genre): RoundState | null {
   }
 }
 
-export function saveDailyState(state: RoundState) {
+export const saveDailyState = (state: RoundState) => {
   localStorage.setItem(dailyKey(state.date, state.genre), JSON.stringify(state))
 }
 
 /** Placeholder for future auth-backed sync */
-export function getAnonId(): string {
+export const getAnonId = (): string => {
   const key = `${PREFIX}:anonId`
   let id = localStorage.getItem(key)
   if (!id) {

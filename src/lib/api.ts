@@ -6,25 +6,25 @@ import type {
   TrackPublic,
 } from './types'
 
-export function fetchDaily(genre: Genre) {
+export const fetchDaily = (genre: Genre) => {
   return http
     .get<DailyPuzzle>('/daily', { params: { genre } })
     .then((res) => res.data)
 }
 
-export function fetchUnlimited(genre?: Genre) {
+export const fetchUnlimited = (genre?: Genre) => {
   return http
     .get<DailyPuzzle>('/unlimited', { params: genre ? { genre } : undefined })
     .then((res) => res.data)
 }
 
-export function searchTracks(q: string) {
+export const searchTracks = (q: string) => {
   return http
     .get<{ hits: SearchHit[] }>('/search', { params: { q } })
     .then((res) => res.data)
 }
 
-export function submitGuess(roundId: string, trackId: string, stageIndex: number) {
+export const submitGuess = (roundId: string, trackId: string, stageIndex: number) => {
   return http
     .post<
       | { correct: true; score: number; track: TrackPublic }
@@ -33,7 +33,7 @@ export function submitGuess(roundId: string, trackId: string, stageIndex: number
     .then((res) => res.data)
 }
 
-export function revealTrack(roundId: string) {
+export const revealTrack = (roundId: string) => {
   return http
     .post<{ track: TrackPublic; score: number }>('/reveal', { roundId })
     .then((res) => res.data)
