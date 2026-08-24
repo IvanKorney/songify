@@ -10,49 +10,57 @@ const waitFor = (el: HTMLMediaElement, event: 'canplaythrough' | 'error') =>
     )
   })
 
-export class ClipPlayer {
-  private audio: HTMLAudioElement | null = null
-  private stopTimer: ReturnType<typeof setTimeout> | null = null
-  private url: string | null = null
+export type ClipPlayer = {
+  load: (url: string) => Promise<void>
+  playClip: (seconds: number) => Promise<void>
+  stop: () => void
+  dispose: () => void
+}
 
-  async load(url: string) {
-    if (this.url === url && this.audio) return
-    this.dispose()
-    this.url = url
-    this.audio = new Audio(url)
-    this.audio.preload = 'auto'
-    this.audio.load()
+export const createClipPlayer = (): ClipPlayer => {
+  let audio: HTMLAudioElement | null = null
+  let stopTimer: ReturnType<typeof setTimeout> | null = null
+  let loadedUrl: string | null = null
 
-    await Promise.race([waitFor(this.audio, 'canplaythrough'), waitFor(this.audio, 'error')])
+  const stop = () => {
+    if (stopTimer) clearTimeout(stopTimer)
+    stopTimer = null
+    if (audio) {
+      audio.pause()
+      audio.currentTime = 0
+    }
   }
 
-  async playClip(seconds: number) {
-    if (!this.audio) throw new Error('Audio not loaded')
-    if (this.stopTimer) clearTimeout(this.stopTimer)
-    this.audio.pause()
-    this.audio.currentTime = 0
-    await this.audio.play()
-    this.stopTimer = setTimeout(() => {
-      this.audio?.pause()
-      if (this.audio) this.audio.currentTime = 0
+  const dispose = () => {
+    stop()
+    if (audio) {
+      audio.src = ''
+      audio = null
+    }
+    loadedUrl = null
+  }
+
+  const load = async (url: string) => {
+    if (loadedUrl === url && audio) return
+    dispose()
+    loadedUrl = url
+    audio = new Audio(url)
+    audio.preload = 'auto'
+    audio.load()
+    await Promise.race([waitFor(audio, 'canplaythrough'), waitFor(audio, 'error')])
+  }
+
+  const playClip = async (seconds: number) => {
+    if (!audio) throw new Error('Audio not loaded')
+    if (stopTimer) clearTimeout(stopTimer)
+    audio.pause()
+    audio.currentTime = 0
+    await audio.play()
+    stopTimer = setTimeout(() => {
+      audio?.pause()
+      if (audio) audio.currentTime = 0
     }, Math.max(50, seconds * 1000))
   }
 
-  stop() {
-    if (this.stopTimer) clearTimeout(this.stopTimer)
-    this.stopTimer = null
-    if (this.audio) {
-      this.audio.pause()
-      this.audio.currentTime = 0
-    }
-  }
-
-  dispose() {
-    this.stop()
-    if (this.audio) {
-      this.audio.src = ''
-      this.audio = null
-    }
-    this.url = null
-  }
+  return { load, playClip, stop, dispose }
 }
