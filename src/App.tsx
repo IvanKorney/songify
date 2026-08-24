@@ -1,4 +1,5 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { AccountChip } from './components/AccountChip'
 import { GamePage } from './pages/GamePage'
 import './App.css'
 
@@ -12,6 +13,7 @@ const App = () => {
         <NavLink to="/unlimited" className={({ isActive }) => (isActive ? 'active' : undefined)}>
           Unlimited
         </NavLink>
+        <AccountChip />
       </nav>
       <Routes>
         <Route path="/" element={<Navigate to="/daily" replace />} />
