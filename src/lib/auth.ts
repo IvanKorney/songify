@@ -1,4 +1,4 @@
-import { http } from './http'
+import { api } from './apiClient'
 import { getAnonId } from './storage'
 import type { Genre, LeaderboardEntry, UserSession } from './types'
 
@@ -12,13 +12,13 @@ export const getPlayerId = (): string => {
 }
 
 export const fetchLeaderboard = async (date: string, genre: Genre) => {
-  const { data } = await http.get<{ entries: LeaderboardEntry[] }>('/leaderboard', {
-    params: { date, genre },
-  })
+  const data = await api
+    .get('leaderboard', { searchParams: { date, genre } })
+    .json<{ entries: LeaderboardEntry[] }>()
   return data.entries
 }
 
 export const fetchMe = async () => {
-  const { data } = await http.get<{ user: UserSession }>('/me')
+  const data = await api.get('me').json<{ user: UserSession }>()
   return data.user
 }
