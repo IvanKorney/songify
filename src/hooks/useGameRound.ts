@@ -7,7 +7,7 @@ import {
   revealTrack,
   submitGuess,
 } from '../lib/api'
-import { ClipPlayer } from '../lib/audio'
+import { createClipPlayer } from '../lib/audio'
 import { loadDailyState, saveDailyState } from '../lib/storage'
 import {
   STAGE_SECONDS,
@@ -49,7 +49,7 @@ export const useGameRound = ({ mode, genre }: Options) => {
   const [state, setState] = useState<RoundState | null>(null)
   const [playing, setPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const playerRef = useRef(new ClipPlayer())
+  const playerRef = useRef(createClipPlayer())
 
   const puzzleQuery = useQuery({
     queryKey: mode === 'daily' ? queryKeys.daily(genre) : queryKeys.unlimited(genre),
