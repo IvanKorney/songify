@@ -2,6 +2,9 @@ type SpotifyToken = { access_token: string; expires_at: number }
 
 let cached: SpotifyToken | null = null
 
+/** Development-mode Spotify apps reject search limits above 10. */
+const MAX_PAGE_SIZE = 10
+
 export type SpotifyTrack = {
   id: string
   name: string
@@ -37,35 +40,74 @@ const getToken = async (clientId: string, clientSecret: string): Promise<string>
 const spotifyJson = async <T>(url: string, clientId: string, clientSecret: string): Promise<T> => {
   const token = await getToken(clientId, clientSecret)
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(`Spotify ${res.status}`)
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Spotify ${res.status}: ${body.slice(0, 180)}`)
+  }
   return res.json() as Promise<T>
 }
 
+const searchPage = async (
+  query: string,
+  clientId: string,
+  clientSecret: string,
+  limit: number,
+  offset: number,
+): Promise<SpotifyTrack[]> => {
+  const url = new URL('https://api.spotify.com/v1/search')
+  url.searchParams.set('q', query)
+  url.searchParams.set('type', 'track')
+  url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), MAX_PAGE_SIZE)))
+  url.searchParams.set('offset', String(Math.max(offset, 0)))
+  url.searchParams.set('market', 'US')
+  const data = await spotifyJson<{ tracks: { items: SpotifyTrack[] } }>(
+    url.toString(),
+    clientId,
+    clientSecret,
+  )
+  return data.tracks.items ?? []
+}
+
+/** Single-page search (guess autocomplete). */
 export const spotifySearch = async (
   query: string,
   clientId: string,
   clientSecret: string,
   limit = 8,
 ): Promise<SpotifyTrack[]> => {
-  const url = new URL('https://api.spotify.com/v1/search')
-  url.searchParams.set('q', query)
-  url.searchParams.set('type', 'track')
-  url.searchParams.set('limit', String(limit))
-  const data = await spotifyJson<{ tracks: { items: SpotifyTrack[] } }>(
-    url.toString(),
-    clientId,
-    clientSecret,
-  )
-  return data.tracks.items
+  return searchPage(query, clientId, clientSecret, limit, 0)
 }
 
+/**
+ * Genre pool for daily/unlimited. Pages past the 10-result cap
+ * until we have `target` unique tracks (or Spotify runs out).
+ */
 export const spotifySearchByGenre = async (
   genre: string,
   clientId: string,
   clientSecret: string,
-  limit = 20,
+  target = 50,
 ): Promise<SpotifyTrack[]> => {
-  return spotifySearch(`genre:${genre}`, clientId, clientSecret, limit)
+  const queries = [`genre:${genre}`, genre]
+  for (const q of queries) {
+    const collected: SpotifyTrack[] = []
+    const seen = new Set<string>()
+    let offset = 0
+    while (collected.length < target) {
+      const page = await searchPage(q, clientId, clientSecret, MAX_PAGE_SIZE, offset)
+      if (!page.length) break
+      for (const track of page) {
+        if (seen.has(track.id)) continue
+        seen.add(track.id)
+        collected.push(track)
+        if (collected.length >= target) break
+      }
+      if (page.length < MAX_PAGE_SIZE) break
+      offset += MAX_PAGE_SIZE
+    }
+    if (collected.length) return collected
+  }
+  return []
 }
 
 export const spotifyGetTrack = async (
@@ -73,9 +115,7 @@ export const spotifyGetTrack = async (
   clientId: string,
   clientSecret: string,
 ): Promise<SpotifyTrack> => {
-  return spotifyJson<SpotifyTrack>(
-    `https://api.spotify.com/v1/tracks/${id}`,
-    clientId,
-    clientSecret,
-  )
+  const url = new URL(`https://api.spotify.com/v1/tracks/${id}`)
+  url.searchParams.set('market', 'US')
+  return spotifyJson<SpotifyTrack>(url.toString(), clientId, clientSecret)
 }

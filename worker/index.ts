@@ -56,7 +56,6 @@ const liveDaily = async (env: Env, date: string, genre: Genre): Promise<TrackSec
     genreQuery(genre),
     env.SPOTIFY_CLIENT_ID!,
     env.SPOTIFY_CLIENT_SECRET!,
-    50,
   )
   if (!items.length) throw new Error('No Spotify tracks for genre')
   const pick = items[hash(`${date}:${genre}`) % items.length]!
@@ -125,7 +124,6 @@ export default {
             genreQuery(genre),
             env.SPOTIFY_CLIENT_ID!,
             env.SPOTIFY_CLIENT_SECRET!,
-            50,
           )
           const pick = items[Math.floor(Math.random() * items.length)]
           if (!pick) throw new Error('No tracks')
