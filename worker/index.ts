@@ -1,4 +1,4 @@
-import { dailyTrack, randomUnlimited, searchMock, toPublic, trackById } from './mock'
+import { fromSpotify, liveSearch, resolvePreview, useMock } from './catalog'
 import {
   STAGE_POINTS,
   decodeRoundId,
@@ -6,7 +6,16 @@ import {
   nyDate,
   parseGenre,
 } from './daily'
-import type { GuessRequest, Genre } from './types'
+import type { Env } from './env'
+import {
+  dailyTrack,
+  randomUnlimited,
+  searchMock,
+  toPublic,
+  trackById,
+} from './mock'
+import { spotifyGetTrack, spotifySearchByGenre } from './spotify'
+import type { GuessRequest, Genre, TrackSecret } from './types'
 
 const corsHeaders = (origin: string | null): HeadersInit => {
   return {
@@ -16,11 +25,7 @@ const corsHeaders = (origin: string | null): HeadersInit => {
   }
 }
 
-const json = (
-  data: unknown,
-  init: ResponseInit = {},
-  origin: string | null = null,
-) => {
+const json = (data: unknown, init: ResponseInit = {}, origin: string | null = null) => {
   return new Response(JSON.stringify(data), {
     ...init,
     headers: {
@@ -31,8 +36,51 @@ const json = (
   })
 }
 
+const genreQuery = (genre: Genre): string => {
+  if (genre === 'hiphop') return 'hip-hop'
+  if (genre === 'all') return 'pop'
+  return genre
+}
+
+const hash = (input: string): number => {
+  let h = 2166136261
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+const liveDaily = async (env: Env, date: string, genre: Genre): Promise<TrackSecret> => {
+  const items = await spotifySearchByGenre(
+    genreQuery(genre),
+    env.SPOTIFY_CLIENT_ID!,
+    env.SPOTIFY_CLIENT_SECRET!,
+    50,
+  )
+  if (!items.length) throw new Error('No Spotify tracks for genre')
+  const pick = items[hash(`${date}:${genre}`) % items.length]!
+  const previewUrl = await resolvePreview(pick)
+  return fromSpotify(pick, previewUrl)
+}
+
+const resolveTrack = async (env: Env, trackId: string): Promise<TrackSecret | null> => {
+  if (useMock(env)) return trackById(trackId) ?? null
+  try {
+    const spotify = await spotifyGetTrack(
+      trackId,
+      env.SPOTIFY_CLIENT_ID!,
+      env.SPOTIFY_CLIENT_SECRET!,
+    )
+    const previewUrl = await resolvePreview(spotify)
+    return fromSpotify(spotify, previewUrl)
+  } catch {
+    return trackById(trackId) ?? null
+  }
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     const origin = request.headers.get('Origin')
     const path = url.pathname.replace(/^\/api/, '') || '/'
@@ -43,13 +91,15 @@ export default {
 
     try {
       if (request.method === 'GET' && path === '/health') {
-        return json({ ok: true, mock: true }, {}, origin)
+        return json({ ok: true, mock: useMock(env) }, {}, origin)
       }
 
       if (request.method === 'GET' && path === '/daily') {
         const genre = parseGenre(url.searchParams.get('genre')) ?? 'all'
         const date = nyDate()
-        const track = dailyTrack(date, genre)
+        const track = useMock(env)
+          ? dailyTrack(date, genre)
+          : await liveDaily(env, date, genre)
         const roundId = encodeRoundId(date, genre, track.id)
         return json(
           {
@@ -66,15 +116,27 @@ export default {
 
       if (request.method === 'GET' && path === '/unlimited') {
         const genreParam = url.searchParams.get('genre')
-        const genre = genreParam ? parseGenre(genreParam) : null
-        const track = randomUnlimited(genre ?? undefined)
+        const genre = (genreParam ? parseGenre(genreParam) : null) ?? 'all'
+        let track: TrackSecret
+        if (useMock(env)) {
+          track = randomUnlimited(genre)
+        } else {
+          const items = await spotifySearchByGenre(
+            genreQuery(genre),
+            env.SPOTIFY_CLIENT_ID!,
+            env.SPOTIFY_CLIENT_SECRET!,
+            50,
+          )
+          const pick = items[Math.floor(Math.random() * items.length)]
+          if (!pick) throw new Error('No tracks')
+          track = fromSpotify(pick, await resolvePreview(pick))
+        }
         const date = nyDate()
-        const g: Genre = genre ?? 'all'
-        const roundId = encodeRoundId(`u-${Date.now()}`, g, track.id)
+        const roundId = encodeRoundId(`u-${Date.now()}`, genre, track.id)
         return json(
           {
             date,
-            genre: g,
+            genre,
             roundId,
             previewUrl: track.previewUrl,
             durationHintSec: 30,
@@ -86,7 +148,10 @@ export default {
 
       if (request.method === 'GET' && path === '/search') {
         const q = url.searchParams.get('q') ?? ''
-        const hits = searchMock(q).map((t) => ({
+        const tracks = useMock(env)
+          ? searchMock(q)
+          : await liveSearch(q, env)
+        const hits = tracks.map((t) => ({
           id: t.id,
           title: t.title,
           artists: t.artists,
@@ -100,7 +165,7 @@ export default {
         const decoded = decodeRoundId(body.roundId)
         if (!decoded) return json({ error: 'Invalid round' }, { status: 400 }, origin)
 
-        const track = trackById(decoded.trackId)
+        const track = await resolveTrack(env, decoded.trackId)
         if (!track) return json({ error: 'Unknown track' }, { status: 404 }, origin)
 
         const stageIndex = Math.max(0, Math.min(STAGE_POINTS.length - 1, body.stageIndex))
@@ -125,7 +190,7 @@ export default {
         const body = (await request.json()) as { roundId: string; stageIndex?: number }
         const decoded = decodeRoundId(body.roundId)
         if (!decoded) return json({ error: 'Invalid round' }, { status: 400 }, origin)
-        const track = trackById(decoded.trackId)
+        const track = await resolveTrack(env, decoded.trackId)
         if (!track) return json({ error: 'Unknown track' }, { status: 404 }, origin)
         return json({ track: toPublic(track), score: 0 }, {}, origin)
       }
@@ -136,4 +201,4 @@ export default {
       return json({ error: message }, { status: 500 }, origin)
     }
   },
-} satisfies ExportedHandler
+} satisfies ExportedHandler<Env>

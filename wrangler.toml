@@ -4,8 +4,6 @@ compatibility_date = "2025-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# Set real credentials later:
-# wrangler secret put SPOTIFY_CLIENT_ID
-# wrangler secret put SPOTIFY_CLIENT_SECRET
-# wrangler secret put DEEZER_ENABLED  (optional)
+# Local: copy .dev.vars.example → .dev.vars
+# Prod: wrangler secret put SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET
 MOCK_MODE = "true"
