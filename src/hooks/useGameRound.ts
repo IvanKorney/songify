@@ -73,9 +73,14 @@ export const useGameRound = ({ mode, genre }: Options) => {
 
   useEffect(() => {
     if (!state?.previewUrl) return
-    void playerRef.current.load(state.previewUrl).catch(() => {
-      setAudioError('Failed to load preview audio')
-    })
+    const loadPreview = async () => {
+      try {
+        await playerRef.current.load(state.previewUrl!)
+      } catch {
+        setAudioError('Failed to load preview audio')
+      }
+    }
+    void loadPreview()
   }, [state?.previewUrl])
 
   const persist = useCallback(
