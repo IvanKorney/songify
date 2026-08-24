@@ -48,7 +48,7 @@ export const useGameRound = ({ mode, genre }: Options) => {
   const queryClient = useQueryClient()
   const [state, setState] = useState<RoundState | null>(null)
   const [playing, setPlaying] = useState(false)
-  const [audioError, setAudioError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const playerRef = useRef(new ClipPlayer())
 
   const puzzleQuery = useQuery({
@@ -77,7 +77,7 @@ export const useGameRound = ({ mode, genre }: Options) => {
       try {
         await playerRef.current.load(state.previewUrl!)
       } catch {
-        setAudioError('Failed to load preview audio')
+        setError('Preview failed')
       }
     }
     void loadPreview()
@@ -99,11 +99,11 @@ export const useGameRound = ({ mode, genre }: Options) => {
   const play = useCallback(async () => {
     if (!state || state.status !== 'playing') return
     setPlaying(true)
-    setAudioError(null)
+    setError(null)
     try {
       await playerRef.current.playClip(clipSeconds)
     } catch {
-      setAudioError('Playback failed — click again after interaction')
+      setError('Playback failed')
     } finally {
       setTimeout(() => setPlaying(false), clipSeconds * 1000 + 50)
     }
@@ -192,16 +192,15 @@ export const useGameRound = ({ mode, genre }: Options) => {
     void puzzleQuery.refetch()
   }, [puzzleQuery])
 
-  const error =
-    audioError ??
-    (puzzleQuery.error instanceof Error ? puzzleQuery.error.message : null) ??
-    (guessMutation.error instanceof Error ? guessMutation.error.message : null) ??
-    (revealMutation.error instanceof Error ? revealMutation.error.message : null)
-
   return {
     state,
     loading: puzzleQuery.isLoading || (!state && puzzleQuery.isFetching),
-    error,
+    error:
+      error ??
+      puzzleQuery.error?.message ??
+      guessMutation.error?.message ??
+      revealMutation.error?.message ??
+      null,
     playing,
     clipSeconds,
     play,
