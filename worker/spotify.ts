@@ -25,7 +25,7 @@ const getToken = async (clientId: string, clientSecret: string): Promise<string>
     },
     body,
   })
-  if (!res.ok) throw new Error(`Spotify auth failed (${res.status})`)
+  if (!res.ok) throw new Error(`Spotify auth ${res.status}`)
   const data = (await res.json()) as { access_token: string; expires_in: number }
   cached = {
     access_token: data.access_token,
@@ -34,20 +34,28 @@ const getToken = async (clientId: string, clientSecret: string): Promise<string>
   return data.access_token
 }
 
+const spotifyJson = async <T>(url: string, clientId: string, clientSecret: string): Promise<T> => {
+  const token = await getToken(clientId, clientSecret)
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(`Spotify ${res.status}`)
+  return res.json() as Promise<T>
+}
+
 export const spotifySearch = async (
   query: string,
   clientId: string,
   clientSecret: string,
   limit = 8,
 ): Promise<SpotifyTrack[]> => {
-  const token = await getToken(clientId, clientSecret)
   const url = new URL('https://api.spotify.com/v1/search')
   url.searchParams.set('q', query)
   url.searchParams.set('type', 'track')
   url.searchParams.set('limit', String(limit))
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(`Spotify search failed (${res.status})`)
-  const data = (await res.json()) as { tracks: { items: SpotifyTrack[] } }
+  const data = await spotifyJson<{ tracks: { items: SpotifyTrack[] } }>(
+    url.toString(),
+    clientId,
+    clientSecret,
+  )
   return data.tracks.items
 }
 
@@ -65,10 +73,9 @@ export const spotifyGetTrack = async (
   clientId: string,
   clientSecret: string,
 ): Promise<SpotifyTrack> => {
-  const token = await getToken(clientId, clientSecret)
-  const res = await fetch(`https://api.spotify.com/v1/tracks/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error(`Spotify track failed (${res.status})`)
-  return res.json() as Promise<SpotifyTrack>
+  return spotifyJson<SpotifyTrack>(
+    `https://api.spotify.com/v1/tracks/${id}`,
+    clientId,
+    clientSecret,
+  )
 }
