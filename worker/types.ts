@@ -58,3 +58,16 @@ export type RevealResponse = {
   track: TrackPublic
   score: number
 }
+
+export type UserSession = {
+  id: string
+  displayName: string
+} | null
+
+export type LeaderboardEntry = {
+  userId: string
+  displayName: string
+  score: number
+  genre: Genre
+  date: string
+}
