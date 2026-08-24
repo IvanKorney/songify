@@ -1,0 +1,11 @@
+name = "songify-api"
+main = "worker/index.ts"
+compatibility_date = "2025-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Set real credentials later:
+# wrangler secret put SPOTIFY_CLIENT_ID
+# wrangler secret put SPOTIFY_CLIENT_SECRET
+# wrangler secret put DEEZER_ENABLED  (optional)
+MOCK_MODE = "true"
