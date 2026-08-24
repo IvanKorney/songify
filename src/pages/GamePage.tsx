@@ -22,7 +22,7 @@ export const GamePage = ({ mode }: Props) => {
     <div className="game-page">
       <header className="game-header">
         <h1>songify</h1>
-        <p className="mode-label">{mode === 'daily' ? 'Daily' : 'Unlimited'}</p>
+        <p className="mode-label">{mode === 'daily' ? 'Daily challenge' : 'Unlimited'}</p>
       </header>
 
       <GenreTabs value={genre} onChange={setGenre} />

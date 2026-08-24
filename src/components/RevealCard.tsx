@@ -10,6 +10,9 @@ type Props = {
 export const RevealCard = ({ track, score, won, onNext }: Props) => {
   return (
     <div className={`reveal-card ${won ? 'won' : 'lost'}`}>
+      {track.albumArtUrl && (
+        <img className="reveal-art" src={track.albumArtUrl} alt="" />
+      )}
       <p className="reveal-status">{won ? `Correct · ${score} pts` : 'Out of skips'}</p>
       <h2>{track.title}</h2>
       <p>{track.artists.join(', ')}</p>
