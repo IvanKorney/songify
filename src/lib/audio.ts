@@ -1,3 +1,15 @@
+const waitFor = (el: HTMLMediaElement, event: 'canplaythrough' | 'error') =>
+  new Promise<void>((resolve, reject) => {
+    el.addEventListener(
+      event,
+      () => {
+        if (event === 'error') reject(new Error('Failed to load audio'))
+        else resolve()
+      },
+      { once: true },
+    )
+  })
+
 export class ClipPlayer {
   private audio: HTMLAudioElement | null = null
   private stopTimer: ReturnType<typeof setTimeout> | null = null
@@ -9,24 +21,9 @@ export class ClipPlayer {
     this.url = url
     this.audio = new Audio(url)
     this.audio.preload = 'auto'
-    await new Promise<void>((resolve, reject) => {
-      if (!this.audio) return reject(new Error('No audio'))
-      const onReady = () => {
-        cleanup()
-        resolve()
-      }
-      const onError = () => {
-        cleanup()
-        reject(new Error('Failed to load audio'))
-      }
-      const cleanup = () => {
-        this.audio?.removeEventListener('canplaythrough', onReady)
-        this.audio?.removeEventListener('error', onError)
-      }
-      this.audio.addEventListener('canplaythrough', onReady)
-      this.audio.addEventListener('error', onError)
-      void this.audio.load()
-    })
+    this.audio.load()
+
+    await Promise.race([waitFor(this.audio, 'canplaythrough'), waitFor(this.audio, 'error')])
   }
 
   async playClip(seconds: number) {

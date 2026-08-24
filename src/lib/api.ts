@@ -1,4 +1,4 @@
-import { http } from './http'
+import { api } from './apiClient'
 import type {
   DailyPuzzle,
   Genre,
@@ -6,37 +6,31 @@ import type {
   TrackPublic,
 } from './types'
 
-export const fetchDaily = (genre: Genre) => {
-  return http
-    .get<DailyPuzzle>('/daily', { params: { genre } })
-    .then((res) => res.data)
+export const fetchDaily = async (genre: Genre) => {
+  return api.get('daily', { searchParams: { genre } }).json<DailyPuzzle>()
 }
 
-export const fetchUnlimited = (genre?: Genre) => {
-  return http
-    .get<DailyPuzzle>('/unlimited', { params: genre ? { genre } : undefined })
-    .then((res) => res.data)
+export const fetchUnlimited = async (genre?: Genre) => {
+  return api
+    .get('unlimited', { searchParams: genre ? { genre } : undefined })
+    .json<DailyPuzzle>()
 }
 
-export const searchTracks = (q: string) => {
-  return http
-    .get<{ hits: SearchHit[] }>('/search', { params: { q } })
-    .then((res) => res.data)
+export const searchTracks = async (q: string) => {
+  return api.get('search', { searchParams: { q } }).json<{ hits: SearchHit[] }>()
 }
 
-export const submitGuess = (roundId: string, trackId: string, stageIndex: number) => {
-  return http
-    .post<
+export const submitGuess = async (roundId: string, trackId: string, stageIndex: number) => {
+  return api
+    .post('guess', { json: { roundId, trackId, stageIndex } })
+    .json<
       | { correct: true; score: number; track: TrackPublic }
       | { correct: false; score: 0 }
-    >('/guess', { roundId, trackId, stageIndex })
-    .then((res) => res.data)
+    >()
 }
 
-export const revealTrack = (roundId: string) => {
-  return http
-    .post<{ track: TrackPublic; score: number }>('/reveal', { roundId })
-    .then((res) => res.data)
+export const revealTrack = async (roundId: string) => {
+  return api.post('reveal', { json: { roundId } }).json<{ track: TrackPublic; score: number }>()
 }
 
 export const queryKeys = {
