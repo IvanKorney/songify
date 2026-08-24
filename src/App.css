@@ -116,8 +116,13 @@
     box-shadow 0.18s var(--ease-out);
 }
 
-.genre-tabs button:hover {
+.genre-tabs button:hover:not(:disabled) {
   color: var(--text);
+}
+
+.genre-tabs button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .genre-tabs button.active {

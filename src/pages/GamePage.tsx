@@ -17,6 +17,13 @@ export const GamePage = ({ mode }: Props) => {
   const game = useGameRound({ mode, genre })
   const done = game.state?.status === 'won' || game.state?.status === 'lost'
   const lastStage = (game.state?.stageIndex ?? 0) >= STAGE_SECONDS.length - 1
+  const locked = game.loading || game.busy
+
+  const changeGenre = (next: Genre) => {
+    if (next === genre || locked) return
+    game.stopPlayback()
+    setGenre(next)
+  }
 
   return (
     <div className="game-page">
@@ -25,7 +32,7 @@ export const GamePage = ({ mode }: Props) => {
         <p className="mode-label">{mode === 'daily' ? 'Daily challenge' : 'Unlimited'}</p>
       </header>
 
-      <GenreTabs value={genre} onChange={setGenre} />
+      <GenreTabs value={genre} onChange={changeGenre} disabled={locked} />
 
       {game.loading && <p className="status-line">Loading…</p>}
       {game.error && <p className="status-line error">{game.error}</p>}
@@ -38,7 +45,7 @@ export const GamePage = ({ mode }: Props) => {
 
           <PlayButton
             playing={game.playing}
-            disabled={done || !game.state.previewUrl}
+            disabled={done || locked || !game.state.previewUrl || game.playing}
             onClick={() => void game.play()}
           />
 
@@ -51,7 +58,7 @@ export const GamePage = ({ mode }: Props) => {
             />
           ) : (
             <SongSearch
-              disabled={done}
+              disabled={done || locked}
               onSelect={(hit) => void game.guess(hit)}
               onSkip={() => void game.skip()}
               skipLabel={lastStage ? 'Give up' : 'Skip'}

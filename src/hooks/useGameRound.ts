@@ -48,39 +48,67 @@ export const useGameRound = ({ mode, genre }: Options) => {
   const queryClient = useQueryClient()
   const [state, setState] = useState<RoundState | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [previewReady, setPreviewReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const playerRef = useRef(createClipPlayer())
+  const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const puzzleQuery = useQuery({
     queryKey: mode === 'daily' ? queryKeys.daily(genre) : queryKeys.unlimited(genre),
     queryFn: () => (mode === 'daily' ? fetchDaily(genre) : fetchUnlimited(genre)),
   })
 
+  const stopPlayback = useCallback(() => {
+    if (playTimerRef.current) {
+      clearTimeout(playTimerRef.current)
+      playTimerRef.current = null
+    }
+    playerRef.current.stop()
+    setPlaying(false)
+  }, [])
+
   useEffect(() => {
     const puzzle = puzzleQuery.data
     if (!puzzle) return
+    stopPlayback()
     if (mode === 'daily') {
       const saved = loadDailyState(puzzle.date, genre)
       setState(saved && saved.roundId === puzzle.roundId ? saved : emptyRound(puzzle))
     } else {
       setState(emptyRound(puzzle))
     }
-  }, [puzzleQuery.data, mode, genre])
+  }, [puzzleQuery.data, mode, genre, stopPlayback])
 
   useEffect(() => {
-    return () => playerRef.current.dispose()
+    return () => {
+      if (playTimerRef.current) clearTimeout(playTimerRef.current)
+      playerRef.current.dispose()
+    }
   }, [])
 
   useEffect(() => {
-    if (!state?.previewUrl) return
+    setPreviewReady(false)
+    setError(null)
+    if (!state?.previewUrl) {
+      setPreviewReady(true)
+      return
+    }
+    let cancelled = false
     const loadPreview = async () => {
       try {
         await playerRef.current.load(state.previewUrl!)
+        if (!cancelled) setPreviewReady(true)
       } catch {
-        setError('Preview failed')
+        if (!cancelled) {
+          setPreviewReady(true)
+          setError('Preview failed')
+        }
       }
     }
     void loadPreview()
+    return () => {
+      cancelled = true
+    }
   }, [state?.previewUrl])
 
   const persist = useCallback(
@@ -97,17 +125,21 @@ export const useGameRound = ({ mode, genre }: Options) => {
   }, [state])
 
   const play = useCallback(async () => {
-    if (!state || state.status !== 'playing') return
+    if (!state || state.status !== 'playing' || playing || !previewReady) return
     setPlaying(true)
     setError(null)
     try {
       await playerRef.current.playClip(clipSeconds)
+      if (playTimerRef.current) clearTimeout(playTimerRef.current)
+      playTimerRef.current = setTimeout(() => {
+        playTimerRef.current = null
+        setPlaying(false)
+      }, clipSeconds * 1000 + 50)
     } catch {
+      setPlaying(false)
       setError('Playback failed')
-    } finally {
-      setTimeout(() => setPlaying(false), clipSeconds * 1000 + 50)
     }
-  }, [state, clipSeconds])
+  }, [state, clipSeconds, playing, previewReady])
 
   const revealMutation = useMutation({
     mutationFn: (roundId: string) => revealTrack(roundId),
@@ -118,9 +150,12 @@ export const useGameRound = ({ mode, genre }: Options) => {
       submitGuess(vars.roundId, vars.trackId, vars.stageIndex),
   })
 
+  const busy = guessMutation.isPending || revealMutation.isPending
+
   const advance = useCallback(
     async (attempt: GuessAttempt, revealed?: TrackPublic, score = 0) => {
       if (!state) return
+      stopPlayback()
       const attempts = [...state.attempts, attempt]
       const nextStage = state.stageIndex + 1
       const exhausted = nextStage >= STAGE_SECONDS.length
@@ -133,7 +168,6 @@ export const useGameRound = ({ mode, genre }: Options) => {
           score,
           revealed,
         })
-        playerRef.current.stop()
         return
       }
 
@@ -147,7 +181,6 @@ export const useGameRound = ({ mode, genre }: Options) => {
           score: 0,
           revealed: reveal.track,
         })
-        playerRef.current.stop()
         return
       }
 
@@ -157,17 +190,18 @@ export const useGameRound = ({ mode, genre }: Options) => {
         stageIndex: nextStage,
       })
     },
-    [state, persist, revealMutation],
+    [state, persist, revealMutation, stopPlayback],
   )
 
   const skip = useCallback(async () => {
-    if (!state || state.status !== 'playing') return
+    if (!state || state.status !== 'playing' || busy) return
     await advance({ kind: 'skip' })
-  }, [state, advance])
+  }, [state, advance, busy])
 
   const guess = useCallback(
     async (hit: SearchHit) => {
-      if (!state || state.status !== 'playing') return
+      if (!state || state.status !== 'playing' || busy) return
+      stopPlayback()
       const result = await guessMutation.mutateAsync({
         roundId: state.roundId,
         trackId: hit.id,
@@ -180,21 +214,30 @@ export const useGameRound = ({ mode, genre }: Options) => {
         await advance({ kind: 'wrong', label })
       }
     },
-    [state, advance, guessMutation],
+    [state, advance, guessMutation, busy, stopPlayback],
   )
 
   const nextUnlimited = useCallback(() => {
     if (mode !== 'unlimited') return
+    stopPlayback()
     void queryClient.invalidateQueries({ queryKey: queryKeys.unlimited(genre) })
-  }, [mode, genre, queryClient])
+  }, [mode, genre, queryClient, stopPlayback])
 
   const reload = useCallback(() => {
+    stopPlayback()
     void puzzleQuery.refetch()
-  }, [puzzleQuery])
+  }, [puzzleQuery, stopPlayback])
+
+  const loading =
+    puzzleQuery.isLoading ||
+    puzzleQuery.isFetching ||
+    (!!state?.previewUrl && !previewReady) ||
+    (!state && puzzleQuery.isPending)
 
   return {
     state,
-    loading: puzzleQuery.isLoading || (!state && puzzleQuery.isFetching),
+    loading,
+    busy,
     error:
       error ??
       puzzleQuery.error?.message ??
@@ -206,6 +249,7 @@ export const useGameRound = ({ mode, genre }: Options) => {
     play,
     skip,
     guess,
+    stopPlayback,
     nextUnlimited,
     reload,
   }
