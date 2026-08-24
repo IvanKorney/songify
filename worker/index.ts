@@ -1,4 +1,3 @@
-import { getSession, listLeaderboard } from './auth'
 import { fromSpotify, liveSearch, resolvePreview, useMock } from './catalog'
 import {
   STAGE_POINTS,
@@ -93,17 +92,6 @@ export default {
     try {
       if (request.method === 'GET' && path === '/health') {
         return json({ ok: true, mock: useMock(env) }, {}, origin)
-      }
-
-      if (request.method === 'GET' && path === '/me') {
-        return json({ user: getSession(request) }, {}, origin)
-      }
-
-      if (request.method === 'GET' && path === '/leaderboard') {
-        const date = url.searchParams.get('date') ?? nyDate()
-        const genre = parseGenre(url.searchParams.get('genre')) ?? 'all'
-        const entries = await listLeaderboard(date, genre)
-        return json({ entries }, {}, origin)
       }
 
       if (request.method === 'GET' && path === '/daily') {
